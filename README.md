@@ -1,117 +1,163 @@
-# U-Net Image Segmentation for Semantic Labeling
-
-This repository implements an image segmentation model using the **U-Net architecture**. U-Net is a powerful deep learning model designed for pixel-wise image segmentation, widely used for tasks such as medical image segmentation, object detection, and image restoration.
+# Nuclei Segmentation Using U-Net Architecture
 
 ## Project Overview
 
-This project applies the U-Net model for binary image segmentation, where the goal is to classify each pixel in an image as either part of a specific region of interest (foreground) or background. The model is trained using a dataset of images and corresponding segmentation masks, where each mask identifies the object or region in the image that needs to be segmented.
+This project focuses on the development of a **nuclei segmentation model** using the **U-Net architecture** to automatically segment and identify the nuclei in **whole slide images (WSIs)**. The dataset used for training and evaluation is sourced from the **2018 Data Science Bowl: Nuclei Segmentation Challenge**. The purpose of this project is to build a deep learning model capable of accurately identifying nuclei in histopathological tissue samples, a key task in digital pathology for diagnosing diseases like cancer.
 
-The U-Net model is built using TensorFlow/Keras and is designed to work on images of size 256x256 pixels. This implementation includes data preprocessing, model architecture, training, evaluation, and visualization.
+The project involves the following steps:
+1. **Dataset Loading**: Loading and preprocessing the data (images and masks).
+2. **Model Architecture**: Implementing and training a **U-Net model** for image segmentation.
+3. **Model Evaluation**: Evaluating model performance based on **accuracy** and **Dice coefficient**.
 
-## Dataset
+---
 
-The dataset consists of images and corresponding binary masks for segmentation tasks. The images are in PNG format, and the masks represent the segmentation areas as binary images (0 for background, 1 for the foreground).
+## Table of Contents
 
-The dataset is expected to be in a specific directory structure:
+- [Project Overview](#project-overview)
+- [Technologies Used](#technologies-used)
+- [Usage](#usage)
+- [Training the Model](#training-the-model)
+- [Evaluation Metrics](#evaluation-metrics)
+- [Results](#results)
+- [Future Work](#future-work)
+- [License](#license)
+- [Acknowledgments](#acknowledgments)
 
-```
-/content/working/
-  └── <image_id>/
-      ├── images/
-      │    └── <image_id>.png
-      └── masks/
-           ├── mask1.png
-           ├── mask2.png
-           └── ...
-```
+---
 
-Where `<image_id>` is a unique identifier for each sample, and the masks represent the segmented regions in the corresponding image.
+## Technologies Used
 
-## Requirements
+This project utilizes several key technologies:
 
-To run this project, you need the following Python libraries:
+- **Python 3.x**: The programming language used for implementing the deep learning model.
+- **TensorFlow 2.x**: A powerful deep learning framework used to build and train the U-Net model.
+- **Keras**: A high-level neural networks API integrated with TensorFlow to build and manage models.
+- **OpenCV**: A library used for reading and processing images.
+- **NumPy**: Essential for numerical operations and handling multi-dimensional arrays.
+- **Matplotlib**: Used for plotting graphs, visualizing training curves, and displaying results.
+- **Scikit-learn**: Used for splitting the dataset into training and validation sets.
+- **Google Colab**: The environment used for training the model on cloud-based GPUs.
 
-- `tensorflow` (for model building and training)
-- `numpy` (for numerical operations)
-- `opencv-python` (for image loading and processing)
-- `matplotlib` (for visualization)
-- `scikit-learn` (for data splitting)
-- `glob` (for file management)
-- `os` (for file handling)
+---
 
-You can install the required libraries using pip:
+## Usage
 
-```bash
-pip install tensorflow numpy opencv-python matplotlib scikit-learn
-```
+### 1. Load the Data
 
-## File Structure
+The dataset consists of images and corresponding masks. The **`data_loader`** function handles loading and preprocessing, resizing the images and masks to a uniform size (256x256 pixels).
 
-- `main.py`: The main script containing the entire pipeline for data loading, model building, training, and evaluation.
-- `README.md`: This file.
-- `/content/working/`: Directory where the dataset is expected to be located (containing images and masks).
-- `/unet_model.keras`: The saved model after training.
-
-## How to Use
-
-### 1. Dataset Preparation
-
-Place your dataset in the `/content/working/` directory with the structure described above. Ensure that each image has a corresponding mask.
-
-### 2. Preprocessing
-
-Run the following script to preprocess the data, load the images, and prepare the training and validation sets:
+To load and visualize a sample image with its corresponding mask:
 
 ```python
-!unzip -q /content/stage1_train.zip -d /content/working/
+from data_loader import load_sample
+
+# Load a sample image and its corresponding mask
+img, mask = load_sample('image_id')
+
+# Display the image and overlay the mask
+import matplotlib.pyplot as plt
+plt.subplot(1, 2, 1)
+plt.imshow(img)
+plt.title("Image")
+plt.axis('off')
+plt.subplot(1, 2, 2)
+plt.imshow(img)
+plt.imshow(mask.squeeze(), cmap='Reds', alpha=0.4)
+plt.title("Overlayed Mask")
+plt.axis('off')
+plt.show()
 ```
 
-This will extract the dataset into the working directory.
+### 2. Train the Model
 
-### 3. Train the Model
-
-To train the model, simply run the `main.py` script. The training process will begin, and the model will be trained on the provided images and masks. The model will be evaluated on a validation set, and training progress will be visualized.
-
-```bash
-python main.py
-```
-
-### 4. Model Architecture
-
-The U-Net model consists of:
-- **Encoder**: A series of convolutional blocks with max pooling to downsample the image and capture features.
-- **Bottleneck**: The deepest layer of the network that captures high-level features.
-- **Decoder**: A series of transpose convolutional blocks with skip connections that upsample the image to its original size.
-
-The model is compiled with the **Adam optimizer** and **binary cross-entropy loss**. The **Dice coefficient** is used as a metric to evaluate the segmentation performance.
-
-### 5. Evaluation and Visualization
-
-After training, the model's performance is evaluated using the Dice coefficient metric, which measures the overlap between predicted and ground truth segmentation masks. A plot of the training and validation Dice coefficient over epochs is generated.
-
-Additionally, some sample predictions are visualized alongside the ground truth masks and the predicted segmentation masks for qualitative evaluation.
-
-### 6. Saving the Model
-
-Once the model is trained, it is saved as a `.keras` file. This allows you to load and use the model for inference on new images:
+To train the **U-Net** model, first load the training and validation data. Then, compile the model and train it:
 
 ```python
-model.save('/content/unet_model.keras')
+from unet_model import build_unet
+from data_loader import data_loader
+
+# Load data
+X_train, Y_train = data_loader('/path/to/data')
+
+# Build the U-Net model
+model = build_unet(input_shape=(256, 256, 3))
+
+# Compile the model
+model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', 'dice_coef'])
+
+# Train the model
+history = model.fit(X_train, Y_train, epochs=30, batch_size=16, validation_split=0.2)
 ```
+
+### 3. Evaluate the Model
+
+After training, evaluate the model's performance on the validation dataset. The model uses **Dice coefficient** as the primary evaluation metric:
+
+```python
+# Evaluate the model on the validation dataset
+val_loss, val_accuracy, val_dice_coef = model.evaluate(X_val, Y_val)
+print(f'Validation Loss: {val_loss}')
+print(f'Validation Accuracy: {val_accuracy}')
+print(f'Validation Dice Coefficient: {val_dice_coef}')
+```
+
+---
+
+## Training the Model
+
+The **U-Net architecture** is a powerful deep learning model designed specifically for **image segmentation tasks**. It consists of an **encoder-decoder** structure with **skip connections** to preserve spatial information. The architecture helps the model learn both local (fine-grained) and global (contextual) features in images, making it ideal for tasks like **nuclei segmentation**.
+
+The model is trained using:
+- **Binary Cross-Entropy Loss**: Suitable for binary segmentation tasks (nuclei vs background).
+- **Accuracy**: Measures the percentage of correctly classified pixels.
+- **Dice Coefficient**: A metric commonly used for evaluating segmentation performance, measuring the overlap between predicted and true masks.
+
+---
+
+## Evaluation Metrics
+
+The model’s performance is measured using the following metrics:
+
+- **Accuracy**: The fraction of pixels correctly classified as either background or nuclei.
+- **Dice Coefficient**: The most important metric for segmentation, measuring the overlap between the predicted and ground truth masks.
+  - Formula:
+    \[
+    	ext{Dice coefficient} = rac{2 \cdot |A \cap B|}{|A| + |B|}
+    \]
+    where \(A\) is the predicted mask and \(B\) is the ground truth mask.
+- **Loss**: The binary cross-entropy loss used during training to measure the difference between predicted probabilities and the true labels.
+
+---
 
 ## Results
 
-After training, the model should produce reasonably good segmentation masks, depending on the quality of the dataset and the training process. You can visualize the results with a side-by-side comparison of the original images, ground truth masks, and predicted masks.
+The model achieved the following results after **30 epochs**:
+
+- **Training Accuracy**: 97.15%
+- **Validation Accuracy**: 97.28%
+- **Training Dice Coefficient**: 0.9025
+- **Validation Dice Coefficient**: 0.9071
+
+The **Dice coefficient** demonstrated steady improvement throughout training. The model achieved its best performance by **Epoch 28**, where the validation Dice coefficient peaked at **0.9130** and validation loss was at its lowest.
+
+---
+
+## Future Work
+
+- **Data Augmentation**: Implementing advanced techniques like **rotation**, **scaling**, and **flipping** to further increase dataset diversity and reduce overfitting.
+- **Advanced Architectures**: Experimenting with **Attention U-Net** or **Transformers** for better focusing on relevant regions of the image.
+- **Transfer Learning**: Fine-tuning pre-trained models (e.g., **VGG16**, **ResNet**) to improve feature extraction and reduce training time.
+- **Better Dataset**: Use a different dataset with more varied cell background so that the final model is more robust.
+
+---
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License – see the [LICENSE.md](LICENSE.md) file for details.
 
-## Acknowledgements
+---
 
-- This code is based on the original U-Net architecture for image segmentation.
-- The dataset used in this project is publicly available for academic research.
+## Acknowledgments
 
-## References
-
-- **U-Net**: [Olaf Ronneberger, Philipp Fischer, Thomas Brox. U-Net: Convolutional Networks for Biomedical Image Segmentation. MICCAI 2015.](https://arxiv.org/abs/1505.04597)
+- The **2018 Data Science Bowl** dataset was provided by **Kaggle** and the **Data Science Bowl** team.
+- Special thanks to **Google Colab** for providing free access to GPU resources, which enabled efficient model training.
